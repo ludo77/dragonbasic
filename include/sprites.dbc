@@ -1,0 +1,92 @@
+;;; SPRITES.DBC
+;;;
+;;; Contains prototypes for all functions that
+;;; work with sprites.
+;;;
+;;; Copyright (c) 2003 by Jeff Massung
+;;; All rights reserved.
+
+#REQUIRES "SPRITES.F"
+
+; Sprite flags
+#CONSTANT DOUBLE			&0200 		; Sprite uses 2x size
+#CONSTANT NORMAL			&0000 		; Normal sprite rendering
+#CONSTANT TRANSPERANT		&0400 		; Transparent sprite
+#CONSTANT WINDOWED			&0800 		; Windowed sprite
+#CONSTANT COLOR_16			&0000 		; Uses one of 16 16-color palettes
+#CONSTANT COLOR_256			&2000 		; Uses one 256-color palette
+#CONSTANT FLIP_X			&1000 		; Flip horizontally
+#CONSTANT FLIP_Y			&2000 		; Flip vertically
+#CONSTANT SIZE_8			&0000 		; 8x8 (square)
+#CONSTANT SIZE_16			&4000 		; 16x16 (square)
+#CONSTANT SIZE_32			&8000 		; 32x32 (square)
+#CONSTANT SIZE_64			&C000 		; 64x64 (square)
+#CONSTANT SQUARE			&0000 		; Square in size
+#CONSTANT WIDE				&4000 		; Wide
+#CONSTANT TALL				&8000 		; Tall
+
+; Memory
+PROTOTYPE INLINE FUNCTION	SPRITE(n)
+PROTOTYPE SUB		LOADSPRITE(n,label,blocks)
+
+; copy all updated sprite data from IWRAM to OAM
+SUB updatesprites
+	; setup dma3 transfer addresses
+	pokew &40000d4, &3000000
+	pokew &40000d8, &7000000
+	; set control to 32-bit, increment both, 256 words
+	pokew &40000dc, &84000100
+END SUB
+
+; Sprite creation
+PROTOTYPE SUB		MAKESPRITE(n,char)
+PROTOTYPE SUB		SIZESPRITE(n,shape,size)
+PROTOTYPE SUB		COLORSPRITE(n,index)
+
+; Manipulation
+PROTOTYPE SUB		FLIPSPRITE(n,x,y)
+PROTOTYPE SUB		ORDERSPRITE(n,priority)
+
+; Position
+
+; return the x coordinate of a sprite
+FUNCTION spritex(n)
+	; Get the OAM attributes, shift the coordinate so that 240
+	; becomes 512, then do a modulo 512 (and 511) and shift
+	; the coordinate back, resulting in negative values for
+	; coordinates above 240.
+	; The point of this convoluted arithmetic is to avoid
+	; costly conditionals.
+	RETURN (peek((n SL 3) + &3000000 + 2) _
+	        + (512 - 240) AND 511) - (512 - 240)
+END FUNCTION
+
+; return the y coordinate of a sprite
+FUNCTION spritey(n)
+	; See spritex for the logic behind this.
+	RETURN (peek((n SL 3) + &3000000) _
+		+ (256 - 160) AND 255) - (256 - 160)
+END FUNCTION
+
+PROTOTYPE SUB		HIDESPRITE(n)
+
+; returns -1 if sprite is offscreen or 0 if onscreen
+FUNCTION spritehidden(n)
+	LOCAL REGISTER x
+	x = (n SL 3) + &3000000
+	IF peekb(x) >= 160 THEN RETURN -1
+	IF (peek(x + 2) AND &1ff) >= 240 THEN RETURN -1
+	RETURN 0
+END FUNCTION
+
+PROTOTYPE SUB		POSITIONSPRITE(n,x,y)
+PROTOTYPE SUB		MOVESPRITE(n,dx,dy)
+
+; Animating and collision detection
+PROTOTYPE SUB		ANIMSPRITE(n,first,last,blocks)
+PROTOTYPE FUNCTION	BUMPSPRITES(n1,n2)
+
+; returns the current frame character of a sprite
+FUNCTION SPRITEFRAME(n)
+	RETURN peek(sprite(n) + 4) and (~ &fc00)
+END FUNCTION

@@ -1,0 +1,31 @@
+;;; SOUND.DBC
+;;;
+;;; Contains prototypes for all functions that
+;;; create notes and sounds on the GBA.
+;;;
+;;; Copyright (c) 2003 by Jeff Massung
+;;; All rights reserved.
+
+#REQUIRES "SOUND.F"
+
+; Sound constants
+#CONSTANT WAVE_DUTY_12		&0000		; 12.5%
+#CONSTANT WAVE_DUTY_25		&0040		; 25%
+#CONSTANT WAVE_DUTY_50		&0080		; 50%
+#CONSTANT WAVE_DUTY_75		&00C0		; 75%
+
+; Turn sound on and off
+PROTOTYPE SUB		TURNSOUNDON
+PROTOTYPE SUB		TURNSOUNDOFF
+
+; Play music and sound (DirectSound)
+PROTOTYPE SUB		PLAYMUSIC(label)
+PROTOTYPE SUB		PLAYSOUND(label)
+
+; Stop music and sound (DirectSound)
+PROTOTYPE SUB		STOPSOUND
+PROTOTYPE SUB		STOPMUSIC
+
+; Play a note or drum effect (Channels)
+PROTOTYPE SUB		PLAYNOTE(channel,length,frequency,wave_duty)
+PROTOTYPE SUB		PLAYDRUM(length,frequency,wave_step)

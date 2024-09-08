@@ -1,0 +1,59 @@
+;;; TILES.DBC
+;;;
+;;; Contains prototypes for all functions that
+;;; work with tiled backgrounds.
+;;;
+;;; Copyright (c) 2003 by Jeff Massung
+;;; All rights reserved.
+
+#REQUIRES "TILES.F"
+
+; Background control flags
+#CONSTANT BG_COLOR_256		&0080 		; Background uses 1 256-color palette
+#CONSTANT BG_COLOR_16		&0000 		; Background uses 16 16-color palettes
+#CONSTANT BG_MOSAIC			&0040 		; Enables mosaic bit of background
+#CONSTANT TEXT_256x256		&0000 		; Tile map size is 256x256
+#CONSTANT TEXT_256x512		&8000 		; Tile map size is 256x512
+#CONSTANT TEXT_512x256		&4000 		; Tile map size is 512x256
+#CONSTANT TEXT_512x512		&C000 		; Tile map size is 512x512
+#CONSTANT ROT_128x128		&0000 		; Rotated tile map is 128x128
+#CONSTANT ROT_256x256		&4000 		; Rotated tile map is 256x256
+#CONSTANT ROT_512x512		&8000 		; Rotated tile map is 512x512
+#CONSTANT ROT_1024x1024		&C000 		; Rotated tile map is 1024x1024
+
+; Memory map functions
+PROTOTYPE INLINE FUNCTION	CHARBLOCK(n)
+PROTOTYPE INLINE FUNCTION	SCREENBLOCK(n)
+
+; Loading tile functions
+PROTOTYPE SUB		LOADTILES(char,offset,from,nblocks)
+PROTOTYPE SUB		LOADFONT16(char,label)
+PROTOTYPE SUB		LOADFONT256(char,label)
+
+; Locating, getting and setting
+PROTOTYPE FUNCTION	TILE(screenb,x,y)
+PROTOTYPE INLINE FUNCTION	GETTILE(address)
+PROTOTYPE SUB		SETTILE(address,index)
+PROTOTYPE INLINE SUB		SETTILEFAST(address,index)
+
+; Backgrounds
+PROTOTYPE SUB		ENABLETILES(bg,screenb,charb,flags)
+PROTOTYPE SUB		DISABLETILES(bg)
+PROTOTYPE SUB		ORDERTILES(bg,priority)
+PROTOTYPE SUB		UPDATETILES(bg)
+
+; Scrolling
+PROTOTYPE SUB		SCROLL(bg,dx,dy)
+PROTOTYPE SUB		SCROLLPOS(bg,x,y)
+PROTOTYPE FUNCTION	SCROLLX(bg)
+PROTOTYPE FUNCTION	SCROLLY(bg)
+
+; Tile manipulation
+PROTOTYPE SUB		COLORTILE(tile,index)
+PROTOTYPE SUB		FLIPTILE(tile,x,y)
+
+; Mapping
+PROTOTYPE SUB		CLEARTILES(tile,width,height)
+PROTOTYPE SUB		CLEARTILESFAST(tile,width,height)
+PROTOTYPE SUB		MAPTILES(tile,label,width,height)
+PROTOTYPE SUB		MAPIMAGE(tile,base,width,height)

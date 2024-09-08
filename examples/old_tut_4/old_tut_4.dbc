@@ -1,0 +1,118 @@
+; Welcome to Tutorial # 4 - Timers & Arrays!
+
+; [Ignore historically interesting comment. :) -- uli]
+; I thought I'd introduce the newest feature released in Dragon BASIC 1.0.4:
+; timers!  I've also been getting many emails about arrays, so there in here
+; to.
+; [/Ignore]
+
+; With timers, there are 6 new functions:
+;  	o MAKETIMER
+; 	o WAITTIMER
+;	o STARTTIMER
+;	o STOPTIMER
+;	o CLOCKTIMER
+;	o RESETTIMER
+
+; By the end of this tutorial, you will make a program that uses of each of
+; these functions.
+
+; First let's include our API.
+
+#include <gba.dbc>
+
+; We'll be using arrays. BASIC has the statement DIM.  In Dragon BASIC, you
+; can use either the statement DIM or GLOBAL to make a global variable (or
+; array), and LOCAL to make a local variable.
+
+; Let's make a global array with 80 indexes and two other variables: y and
+; i.
+
+global height(80)
+global y, i
+
+start:
+
+; Now let's fill the array with values. NOTE: arrays in Dragon BASIC are
+; like C arrays - zero based.  The first index is 0 and the last is the size
+; - 1.
+
+; Arrays are also indexed in DB like C arrays: [].  We make a FOR loop and
+; set the value of each index to its value multiplied by 2.
+
+for i = 0 to 159
+	height[i] = i * 2
+next
+
+; Let's also reset the value of y.
+
+y = 0
+
+; Just like in the last tutorial, we will set our graphics mode to 3.
+
+graphics 3,0
+
+; Now that we've set up our array, let's make our timer.  The GBA has four
+; built-in hardware timers, and the Dragon BASIC timer uses two of these.
+; The other two are reserved for music and sound playback.
+
+; We'll make our timer with the MAKETIMER function.  It takes one argument
+; which is a frequency.  Imagine this as the number of times our timer will
+; fire every second.  We want our timer to fire 10 times a second.
+
+maketimer 10
+
+; We also want to being our timer counting, so we'll call STARTTIMER to let
+; it go.
+
+starttimer
+
+; Now we'll make a loop that will only end once our global variable is
+; greater than or equal to 80.
+
+while y < 80
+
+	; Now, every 0.2 seconds we'll draw a line on the screen and
+	; increment our y value.  To see if 0.2 seconds have passed, we use
+	; CLOCKTIMER to see the current fire count.  Since our timer fires
+	; ten times a second, it should read 2 (2/10 = 0.2).
+
+	if clocktimer >= 2
+	
+		; Draw the line using the height array and global y
+		; variable.
+		
+		line 0,height[y],239,height[y],red
+		
+		; Increment the y value.
+	
+		inc y
+		
+		; Now reset our timer again with RESETTIMER.
+		
+		resettimer
+
+	end if
+
+	; NOTE: During this time you could do anything else, like checking
+	; user input, etc.  This is a very good method of doing things at
+	; different speeds.  Like moving the ghosts in PAC-MAN at a speed
+	; less than that of Mr. PAC-MAN.
+
+; End our loop
+
+loop
+
+; Last, we use the function WAITTIMER to halt execution of our program until
+; a certain amount of time has gone by.  Our timer fires ten times a second.
+; And we want to wait for 1.5 seconds.  That means that we will have to wait
+; until it counts to 15 (1.5*10) for 1.5 seconds to have gone by.
+
+resettimer
+waittimer 15
+
+; Now let's stop our timer with STOPTIMER and finish by erasing the screen
+; to blue.
+
+stoptimer
+cls blue

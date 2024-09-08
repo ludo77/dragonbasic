@@ -1,0 +1,364 @@
+;  FMP.dbc: FMP map handling functions
+;
+;  Copyright (C) 2015 Ulrich Hecht
+;
+;  This software is provided 'as-is', without any express or implied
+;  warranty.  In no event will the authors be held liable for any damages
+;  arising from the use of this software.
+;
+;  Permission is granted to anyone to use this software for any purpose,
+;  including commercial applications, and to alter it and redistribute it
+;  freely, subject to the following restrictions:
+;
+;  1. The origin of this software must not be misrepresented; you must not
+;     claim that you wrote the original software. If you use this software
+;     in a product, an acknowledgment in the product documentation would be
+;     appreciated but is not required.
+;  2. Altered source versions must be plainly marked as such, and must not be
+;     misrepresented as being the original software.
+;  3. This notice may not be removed or altered from any source distribution.
+;
+;  Ulrich Hecht
+;  ulrich.hecht@gmail.com
+
+#REQUIRES "FMP.F"
+
+DIM __fmp_fmp
+DIM __fmp_layer_ptr
+DIM __fmp_screen_block
+DIM __fmp_char_block
+
+PROTOTYPE INLINE FUNCTION FMPTILEADDR(fmp)
+PROTOTYPE INLINE FUNCTION FMPPALADDR(fmp)
+PROTOTYPE INLINE FUNCTION FMPWIDTH(fmp)
+PROTOTYPE INLINE FUNCTION FMPHEIGHT(fmp)
+PROTOTYPE INLINE FUNCTION FMPLAYERS(fmp)
+PROTOTYPE INLINE FUNCTION FMPTILES(fmp)
+PROTOTYPE INLINE FUNCTION FMPTILESIZE(fmp)
+
+SUB FMPMAPTILES16x16(start_x, start_y, map_x, map_y, width, height)
+	LOCAL xx, yy		; SCx start coordinates for 16x16 tile
+	LOCAL x, y		; 16x16 FMP tile coordinates
+	LOCAL dest_x, dest_y	; 8x8 screen tile coordinates
+	LOCAL block		; screen block (SCx)
+	LOCAL line_block	; first screen block (SCx) of current line
+	LOCAL cell		; tile index
+	LOCAL line_ptr		; first tile index of current line
+	LOCAL tile_addr
+	LOCAL map_width
+	LOCAL char_block, screen_block
+	LOCAL map_ptr
+
+	map_width = fmpwidth(__fmp_fmp)
+	char_block = charblock(__fmp_char_block)
+	screen_block = __fmp_screen_block
+
+	width = width - 1	; thanks, BASIC :(
+	height = height - 1
+
+	map_ptr = __fmp_layer_ptr + 8 + map_x + map_y * map_width
+
+	FOR y = 0 TO height
+		dest_y = y * 2 + start_y
+		yy = dest_y and 31
+		line_ptr = map_ptr + y * map_width
+		line_block = screen_block + (dest_y / 32) * 2
+		FOR x = 0 TO width
+			dest_x = x * 2 + start_x
+			block = line_block + dest_x / 32
+			xx = dest_x and 31
+			cell = peekb(line_ptr + x) * 4 + char_block
+			tile_addr = tile(block, xx, yy)
+			settilefast tile_addr, cell
+			settilefast tile_addr+2, cell+1
+			tile_addr = tile(block, xx, yy+1)
+			settilefast tile_addr, cell+2
+			settilefast tile_addr+2, cell+3
+		NEXT
+	NEXT
+END SUB
+
+SUB FMPMAPTILES8x8(start_x, start_y, map_x, map_y, width, height)
+	LOCAL yy		; SCx start coordinate for map tile
+	LOCAL x, y		; FMP map tile coordinates
+	LOCAL dest_x, dest_y	; 8x8 screen tile coordinates
+	LOCAL block		; screen block (SCx)
+	LOCAL line_block	; first screen block (SCx) of current line
+	LOCAL line_ptr		; first tile index of current line
+	LOCAL tile_addr
+	LOCAL map_width
+	LOCAL char_block, screen_block
+	LOCAL map_ptr
+
+	map_width = fmpwidth(__fmp_fmp)
+	char_block = charblock(__fmp_char_block)
+	screen_block = __fmp_screen_block
+
+	width = width - 1	; thanks, BASIC :(
+	height = height - 1
+
+	map_ptr = __fmp_layer_ptr + 8 + map_x + map_y * map_width
+
+	FOR y = 0 TO height
+		dest_y = y + start_y
+		yy = dest_y and 31
+		line_ptr = map_ptr + y * map_width
+		line_block = screen_block + (dest_y / 32) * 2
+		FOR x = 0 TO width STEP 2
+			dest_x = x + start_x
+			tile_addr = tile(line_block + dest_x / 32, _
+					 dest_x and 31, yy)
+			settilefast tile_addr, char_block + peekb(line_ptr + x)
+			settilefast tile_addr+2, char_block + peekb(line_ptr + x + 1)
+		NEXT
+	NEXT
+END SUB
+
+SUB FMPANIMATE16x16(x, y, map_x, map_y, width, height)
+	local anim_ptr		; pointer to animated block description
+	local anim		; pointer to animation description
+	local block_map_ptr	; points to "animation frames to tiles" map
+	local blockx, blocky	; position of animated block
+	; local typ		; type of animation
+	local reload		; animation timer reload value
+	local first, last	; first and last frame of animation
+	local count_ptr		; pointer to current animation timer
+	local count		; value of current animation timer
+	local cur_block_ptr	; pointer to current animation frame's map tile
+	local cur_block		; current animation frame's map tile
+	local effective_sb	; screen block the current tile must go to
+	local trblk		; hardware tile index
+	local dtile		; destination tile address
+	local map_width
+	local cb, sb
+	local layer_ptr
+
+	map_width = fmpwidth(__fmp_fmp)
+	layer_ptr = __fmp_layer_ptr
+
+	; get hardware address for map character block
+	cb = charblock(__fmp_char_block)
+	sb = __fmp_screen_block
+
+	block_map_ptr = peekw(peekw(layer_ptr + 4))
+
+	; get data for first animated block
+	anim_ptr = peekw(layer_ptr + 4) + 4
+	blockx = peek(anim_ptr)
+	blocky = peek(anim_ptr + 2)
+
+	; loop until animated block end marker
+	while (blockx <> &ffff)
+		; check if this block is visible
+		; XXX: we need some sort of CONTINUE...
+		if blockx >= map_x and blockx < map_x+width and _
+		   blocky >= map_y and blocky < map_y+height
+			count_ptr = peekw(anim_ptr + 4)
+			count = peek(count_ptr)
+			; typ = peek(anim)
+
+			dec count
+
+			if count <= 0
+				; time for next frame
+
+				; get animation data
+				anim = peekw(anim_ptr + 8)
+				reload = peek(anim + 2)
+				first = peek(anim + 4)
+				last = peek(anim + 6)
+
+				; anim block map index for current frame
+				cur_block_ptr = count_ptr + 2
+				cur_block = peek(cur_block_ptr)
+
+				; XXX: This is initialization, would need to
+				; be done only once.
+				if cur_block < first then cur_block = first
+
+				; translate animation block index to hardware tile
+				trblk = cb + peek(block_map_ptr + cur_block * 2) * 4
+
+				; add/subtract screen/map offsets
+				inc blockx, x-map_x
+				inc blocky, y-map_y
+
+				; calculate hardware screen block for this
+				; particular block's coordinates (maps may
+				; be larger than one screen block)
+				effective_sb = sb + blocky / 16 * 2 + blockx / 16
+
+				; calculate block position within effective screen block
+				blockx = (blockx and 15) * 2
+				blocky = (blocky and 15) * 2
+
+				; draw four hardware tiles
+				dtile = tile(effective_sb, blockx, blocky)
+				settilefast dtile, trblk
+				settilefast dtile+2, trblk+1	; XXX: dtile+1 for rotscale BG
+				dtile = tile(effective_sb, blockx, blocky+1)
+				settilefast dtile, trblk+2
+				settilefast dtile+2, trblk+3	; XXX: likewise
+
+				; switch to next frame
+				inc cur_block
+				if cur_block > last then cur_block = first
+				poke cur_block_ptr, cur_block
+
+				; restart timer
+				count = reload
+			end if
+
+			poke count_ptr, count
+		end if
+
+		anim_ptr = anim_ptr + 12
+		blockx = peek(anim_ptr)
+		blocky = peek(anim_ptr + 2)
+	loop
+END SUB
+
+SUB FMPANIMATE8x8(x, y, map_x, map_y, width, height)
+	local anim_ptr		; pointer to animated block description
+	local anim		; pointer to animation description
+	local block_map_ptr	; points to "animation frames to tiles" map
+	local blockx, blocky	; position of animated block
+	; local typ		; type of animation
+	local reload		; animation timer reload value
+	local first, last	; first and last frame of animation
+	local count_ptr		; pointer to current animation timer
+	local count		; value of current animation timer
+	local cur_block_ptr	; pointer to current animation frame's map tile
+	local cur_block		; current animation frame's map tile
+	local effective_sb	; screen block the current tile must go to
+	local trblk		; hardware tile index
+	local dtile		; destination tile address
+	local map_width
+	local cb, sb
+	local layer_ptr
+
+	map_width = fmpwidth(__fmp_fmp)
+	layer_ptr = __fmp_layer_ptr
+
+	; get hardware address for map character block
+	cb = charblock(__fmp_char_block)
+	sb = __fmp_screen_block
+
+	block_map_ptr = peekw(peekw(layer_ptr + 4))
+
+	; get data for first animated block
+	anim_ptr = peekw(layer_ptr + 4) + 4
+	blockx = peek(anim_ptr)
+	blocky = peek(anim_ptr + 2)
+
+	; loop until animated block end marker
+	while (blockx <> &ffff)
+		; check if this block is visible
+		; XXX: we need some sort of CONTINUE...
+		if blockx >= map_x and blockx < map_x+width and _
+		   blocky >= map_y and blocky < map_y+height
+			count_ptr = peekw(anim_ptr + 4)
+			count = peek(count_ptr)
+			; typ = peek(anim)
+
+			dec count
+
+			if count <= 0
+				; time for next frame
+
+				; get animation data
+				anim = peekw(anim_ptr + 8)
+				reload = peek(anim + 2)
+				first = peek(anim + 4)
+				last = peek(anim + 6)
+
+				; anim block map index for current frame
+				cur_block_ptr = count_ptr + 2
+				cur_block = peek(cur_block_ptr)
+
+				; XXX: This is initialization, would need to
+				; be done only once.
+				if cur_block < first then cur_block = first
+
+				; translate animation block index to hardware tile
+				trblk = cb + peek(block_map_ptr + cur_block * 2)
+
+				; add/subtract screen/map offsets
+				inc blockx, x-map_x
+				inc blocky, y-map_y
+
+				; calculate hardware screen block for this
+				; particular block's coordinates (maps may
+				; be larger than one screen block)
+				effective_sb = sb + blocky / 32 * 2 + blockx / 32
+
+				; calculate block position within effective screen block
+				blockx = blockx and 31
+				blocky = blocky and 31
+
+				; draw hardware tile
+				dtile = tile(effective_sb, blockx, blocky)
+				settilefast dtile, trblk
+
+				; switch to next frame
+				inc cur_block
+				if cur_block > last then cur_block = first
+				poke cur_block_ptr, cur_block
+
+				; restart timer
+				count = reload
+			end if
+
+			poke count_ptr, count
+		end if
+
+		anim_ptr = anim_ptr + 12
+		blockx = peek(anim_ptr)
+		blocky = peek(anim_ptr + 2)
+	loop
+END SUB
+
+FUNCTION FMPLAYERADDR(fmp, layer)
+	LOCAL layer_ptr
+	; find address of map data
+	layer_ptr = peekw(fmp + 8)	; first layer
+	WHILE layer > 0
+		layer_ptr = peekw(layer_ptr) ; next layer
+		dec layer
+	LOOP
+	RETURN layer_ptr
+END FUNCTION
+
+SUB FMPSETMAP(fmp)
+	__fmp_fmp = fmp
+END SUB
+
+SUB FMPSETLAYER(layer)
+	__fmp_layer_ptr = fmplayeraddr(__fmp_fmp, layer)
+END SUB
+
+SUB FMPSETSBLOCK(sb)
+	__fmp_screen_block = sb
+END SUB
+
+SUB FMPSETCBLOCK(cb)
+	__fmp_char_block = cb
+END SUB
+
+SUB FMPANIMATE(x, y, map_x, map_y, width, height)
+	if peekw(__fmp_layer_ptr + 4) = 0 then return
+	if fmptilesize(__fmp_fmp) = 16
+		fmpanimate16x16 x, y, map_x, map_y, width, height
+	else
+		fmpanimate8x8 x, y, map_x, map_y, width, height
+	end if
+END SUB
+
+SUB FMPMAPTILES(start_x, start_y, map_x, map_y, width, height)
+	; choose mapping routine based on tile size
+	IF fmptilesize(__fmp_fmp) = 16
+		fmpmaptiles16x16 start_x, start_y, map_x, map_y, width, height
+	ELSE
+		fmpmaptiles8x8 start_x, start_y, map_x, map_y, width, height
+	END IF
+END SUB

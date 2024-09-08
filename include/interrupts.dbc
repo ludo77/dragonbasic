@@ -1,0 +1,24 @@
+;;; INTERRUPTS.DBC
+;;;
+;;; Contains all routines for starting
+;;; and stopping interrupt services
+;;;
+;;; Copyright (c) 2003 by Jeff Massung
+;;; All rights reserved.
+
+#REQUIRES "INTERRUPTS.F"
+
+; Turn interrupts on and off
+SUB		ENABLEINTERRUPTS
+	poke &4000208, 1
+END SUB
+SUB		DISABLEINTERRUPTS
+	poke &4000208, 0
+END SUB
+
+; Enable and disable various interrupts
+PROTOTYPE SUB		ONKEY(i,mask,flag)
+PROTOTYPE SUB		ONTIMER(i)
+PROTOTYPE SUB		ONHBLANK(i)
+PROTOTYPE SUB		ONVBLANK(i)
+PROTOTYPE SUB		ONVCOUNT(i,count)

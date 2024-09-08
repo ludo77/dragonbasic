@@ -1,0 +1,15 @@
+language: c
+
+sudo: required
+
+services: docker
+
+install:
+  - docker build -t build .ci/
+  - pip install --user cpp-coveralls
+
+script:
+  - docker run -v $TRAVIS_BUILD_DIR:/build build make -C /build all examples check
+
+after_success:
+  - coveralls --include src --gcov-options '\-lp'

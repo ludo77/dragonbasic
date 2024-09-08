@@ -1,0 +1,65 @@
+;;; CORE.DBC
+;;;
+;;; Compiles required TIN source for all CORE routines
+;;; that are needed for Dragon BASIC to run. This file
+;;; should be included with every program.
+;;;
+;;; Copyright (c) 2003 by Jeff Massung
+;;; All rights reserved.
+
+#REQUIRES "CORE.F"
+
+; CORE memory functions
+PROTOTYPE INLINE FUNCTION	PEEK(address)
+PROTOTYPE INLINE FUNCTION	PEEKB(address)
+PROTOTYPE INLINE FUNCTION	PEEKW(address)
+PROTOTYPE INLINE SUB	POKE(address,n)
+PROTOTYPE INLINE SUB	POKEB(address,n)
+PROTOTYPE INLINE SUB	POKEW(address,n)
+
+; Memory routines
+PROTOTYPE SUB       COPY(address,source,bytes)
+PROTOTYPE SUB       ERASE(address,bytes)
+
+; Graphics mode routines
+
+; set the graphics mode
+SUB graphics(mode, sprites)
+	; for bitmapped modes enable BG 2
+	IF mode >= 3 THEN mode = mode OR &400
+	; set the sprite bit
+	IF sprites THEN mode = mode OR &1040
+	; set REG_DISPCNT
+	poke &4000000, mode
+	; erase VRAM
+	erase &6000000, &18000
+END SUB
+
+; wait for the next vertical blank
+; XXX: This assumes that the user vblank handler does not touch DISPCNT or
+; IE...
+SUB vblank
+	LOCAL old_dispcnt, old_ie
+	LOCAL REGISTER ie, dispcnt
+
+	; Loading the constants here is more work overall, but makes for a
+	; faster return when the halt SWI is finished.
+	dispcnt = &4000004
+	ie = &4000200
+
+	; enable vblank interrupt in DISPCNT
+	old_dispcnt = peek(dispcnt)
+	poke dispcnt, old_dispcnt OR 8
+
+	; enable vblank interrupt in IE
+	old_ie = peek(ie)
+	poke ie, old_ie OR 1
+
+	swi 5	; VBlankIntrWait
+
+	; restore old settings
+	poke dispcnt, old_dispcnt
+	poke ie, old_ie
+END SUB
+
+PROTOTYPE INLINE FUNCTION	SCANLINE

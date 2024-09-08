@@ -1,0 +1,22 @@
+;;; SRAM.DBC
+;;;
+;;; Contains all static ram functions
+;;;
+;;; Copyright (c) 2003 by Jeff Massung
+;;; All rights reserved.
+
+#REQUIRES "SRAM.F"
+
+#CONSTANT SRAM				&E000000 	; Start of static ram
+
+; Save data
+PROTOTYPE SUB		SAVEBYTE(x)
+PROTOTYPE SUB		SAVEWORD(x)
+PROTOTYPE SUB		SAVELONG(x)
+PROTOTYPE SUB		SAVETEXT(s$)
+
+; Load data
+PROTOTYPE FUNCTION	LOADBYTE
+PROTOTYPE FUNCTION	LOADWORD
+PROTOTYPE FUNCTION	LOADLONG
+PROTOTYPE FUNCTION	LOADTEXT$

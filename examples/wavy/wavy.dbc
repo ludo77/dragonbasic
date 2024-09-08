@@ -1,0 +1,478 @@
+;
+;*******************************************************************************
+;*                                                                             *
+;*  WAVY DEMO 32K By Bootlegger 5/7/03 - For 32K DragonBasic Demo Competition  *
+;*                                                                             *
+;*******************************************************************************
+;
+;Sourcecode available for all to hack around with
+;Red background graphic ripped from windows backdrop 'Boiling Point'
+;Bootlegger font ripped from Old Atari ST demo -
+;http://www.reservoir-gods.com/sh3/ {page link 8 - item 2 - fire.htm}
+;Sound ripped from a free wave - http://www.flashkit.com/loops/Ambient/
+;Everything else done by me!
+;Tested on VBA and Real Hardware
+;
+;Converted to modern-day Dragon BASIC by Ulrich Hecht.
+;
+;Demo Contains:
+;3 layers of tiled backgorund
+;Layer 3 backdrop circles around
+;layer 2 shows 32K Demo! (bounces up and down)
+;layer 1 shows Welcome to my {bounces left and right)
+;3 copper bars (made out of sprites - bounce up and down screen)
+;Wavy bootlegger sprites in center of screen
+;4 dragonbasic logos circling around each other
+;Sound loop 1.71 seconds.
+;
+;Compiles to less than 31K!
+;
+;Enjoy
+;Bootlegger
+
+
+
+
+#constant tileends 15 ; alter this as and when new tiles are added
+
+#include <core.dbc>
+#include <ext.dbc>
+#include <palette.dbc>
+#include <rotations.dbc>
+#include <sound.dbc>
+#include <sprites.dbc>
+#include <tiles.dbc>
+#include <timers.dbc>
+
+;All includes for sounds, graphics and palettes
+wave:
+	#sound "./play.wav"
+piccy_bmp:
+	#bitmap "./tiles2.png"
+block_pal:
+	#palette "./tiles2.png"
+redbar_bmp:
+	#bitmap "./redbar.png"
+redbar_pal:
+	#palette "./redbar.png"
+greenbar_bmp:
+	#bitmap "./greenbar.png"
+greenbar_pal:
+	#palette "./greenbar.png"
+bluebar_bmp:
+	#bitmap "./bluebar.png"
+bluebar_pal:
+	#palette "./bluebar.png"
+letter_b_bmp:
+	#bitmap "./letter_b.png"
+letter_o_bmp:
+	#bitmap "./letter_o.png"
+letter_t_bmp:
+	#bitmap "./letter_t.png"
+letter_l_bmp:
+	#bitmap "./letter_l.png"
+letter_e_bmp:
+	#bitmap "./letter_e.png"
+letter_g_bmp:
+	#bitmap "./letter_g.png"
+letter_r_bmp:
+	#bitmap "./letter_r.png"
+letter_pal:
+	#palette "./letter_b.png"
+dragonlogo_bmp:
+	#bitmap "./dragonlogo.png"
+dragonlogo_pal:
+	#palette "./dragonlogo.png"
+
+dim redbar(4)
+dim greenbar(4)
+dim bluebar(4)
+dim char(10)
+dim dragon1
+dim dragon2
+dim dragon3
+dim dragon4
+
+;Define OAM object locations
+dim red_oam
+dim green_oam
+dim blue_oam
+dim letter_b
+dim letter_o
+dim letter_t
+dim letter_l
+dim letter_e
+dim letter_g
+dim letter_r
+dim dragon1_oam
+dim dragon2_oam
+dim dragon3_oam
+dim dragon4_oam
+
+dim myval1, myval2
+
+dim anim_frame
+
+dim r_ypos, r_ydir, g_ypos, g_ydir, b_ypos, b_ydir
+dim block
+dim myoff
+
+;Offsets for bootlegger wave
+offsets:
+datab	0,2,4,6,8,10,12,14,16,18
+datab	20,18,16,14,12,10,8,6,4,2
+datab 	0,0,0,0,0,0,0,0,0,0
+datab 	0,0,0,0,0,0,0,0,0,0
+
+
+datab 	0,0,2,2,4,4,6,6,8,8
+datab	10,10,12,12,14,14,16,16,18,18
+datab	20,20,18,18,16,16,14,14,12,12
+datab	10,10,8,8,6,6,4,4,2,2
+
+datab	0,0,0,2,2,2,4,4,4,6
+datab	6,6,8,8,8,10,10,10,12,12
+datab	12,14,14,14,16,16,16,18,18,18
+datab	20,20,20,18,18,18,16,16,16,14
+datab	14,14,12,12,12,10,10,10,8,8
+datab	8,6,6,6,4,4,4,2,2,2
+
+datab	0,0,0,0,0,0,0,0,0,0
+
+datab	1,2,3,4,5,6,7,8,9,10
+datab 	11,12,13,14,15,16,17,18,19,20
+datab	20,19,18,17,16,15,14,13,12,11
+datab	10,9,8,7,6,5,4,3,2,1
+
+datab	0,0,0,0,0,0,0,0,0,0
+
+datab	1,2,3,4,5,6,7,8,9,10
+datab	11,12,13,14,15,16,17,18,19,20
+datab	21,22,23,24,25,26,27,28,29,30
+datab	31,32,33,34,35,36,37,38,39,40
+datab	41,42,43,44,45,46,47,48,49,50
+datab	51,52,53,54,55,56,57,58,59,60
+datab	59,57,55,53,51
+datab	49,47,45,43,42
+datab	39,37,35,33,31
+datab	29,27,25,23,21
+datab	19,17,15,13,11
+datab	9,7,5,3,1
+
+datab	0,0,0,0,0,0,0,0,0,0
+
+
+
+
+
+
+datab	0,2,4,6,8,10,12,14,16,18
+datab	20,18,16,14,12,10,8,6,4,2
+
+;Actual tile datab for 'Welcome To My'
+tile_map:
+datab  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+datab  6,0,0,0,0,7,0,6,5,5,5,7,0,6,0,0,0,0,0,6,5,5,5,7,0,6,5,5,5,7,0,6,7,0,0,6,7,0,6,5,5,5,7
+datab  5,0,0,0,0,5,0,5,8,0,0,0,0,5,0,0,0,0,0,5,8,0,0,9,0,5,8,0,9,5,0,5,9,7,6,8,5,0,5,8,0,0,0
+datab  5,0,0,0,0,5,0,5,7,0,0,0,0,5,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,5,0,5,0,9,8,0,5,0,5,7,0,0,0
+datab  5,0,0,0,0,5,0,5,5,5,0,0,0,5,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,5,0,5,0,0,0,0,5,0,5,5,5,0,0
+datab  5,0,0,0,0,5,0,5,8,0,0,0,0,5,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,5,0,5,0,0,0,0,5,0,5,8,0,0,0
+datab  5,0,6,7,0,5,0,5,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,5,0,5,0,0,0,0,5,0,5,0,0,0,0
+datab  5,6,8,9,7,5,0,5,7,0,0,0,0,5,7,0,0,0,0,5,7,0,0,6,0,5,7,0,6,5,0,5,0,0,0,0,5,0,5,7,0,0,0
+datab  9,8,0,0,9,8,0,9,5,5,5,8,0,9,5,5,5,8,0,9,5,5,5,8,0,9,5,5,5,8,0,8,0,0,0,0,9,0,9,5,5,5,8
+datab  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,6,5,5,5,5,5,7,0,6,5,5,5,7,0,0,0,0,0,6,7,0,0,6,7,0,5,7,0,6,5,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,9,5,8,0,0,0,5,8,0,9,5,0,0,0,0,0,5,9,7,6,8,5,0,9,5,0,5,8,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,5,0,9,8,0,5,0,0,9,5,8,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,5,7,0,6,5,0,0,0,0,0,5,0,0,0,0,5,0,0,0,5,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,9,5,5,5,8,0,0,0,0,0,8,0,0,0,0,9,0,0,0,9,0,0,0,0,0,0,0,0
+datab  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+
+;Actual tile datab for '32k Demo!'
+tile_map2:
+datab 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,11,10,10,10,12,00,11,10,10,10,12,00,00,00,00,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,10,13,00,14,10,00,10,13,00,14,10,00,00,00,00,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,13,00,00,11,10,00,13,00,00,00,10,00,10,00,10,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,00,00,10,10,10,00,00,00,00,11,10,00,10,11,10,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,00,00,00,14,10,00,00,00,11,10,13,00,10,10,13,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,12,00,00,00,10,00,00,11,10,13,00,00,10,10,12,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,10,12,00,11,10,00,11,10,13,00,00,00,10,14,10,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,14,10,10,10,13,11,10,10,10,10,13,00,10,00,10,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+datab 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+datab 00,10,10,10,10,12,00,11,10,10,10,12,00,11,12,00,00,11,12,00,11,10,10,10,12,00,00,11,00,00
+datab 00,10,00,00,14,10,00,10,13,00,00,00,00,10,10,12,11,10,10,00,10,13,00,14,10,00,00,10,00,00
+datab 00,10,00,00,00,10,00,10,12,00,00,00,00,10,14,10,10,13,10,00,10,00,00,00,10,00,00,10,00,00
+datab 00,10,00,00,00,10,00,10,10,10,00,00,00,10,00,14,13,00,10,00,10,00,00,00,10,00,00,10,00,00
+datab 00,10,00,00,00,10,00,10,13,00,00,00,00,10,00,00,00,00,10,00,10,00,00,00,10,00,00,13,00,00
+datab 00,10,00,00,00,10,00,10,00,00,00,00,00,10,00,00,00,00,10,00,10,00,00,00,10,00,00,00,00,00
+datab 00,10,00,00,11,10,00,10,12,00,00,00,00,10,00,00,00,00,10,00,10,12,00,11,10,00,00,11,00,00
+datab 00,10,10,10,10,13,00,14,10,10,10,13,00,13,00,00,00,00,14,00,14,10,10,10,13,00,00,13,00,00
+datab 00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00,00
+
+sub iwram update_dragons
+	positionsprite dragon1,40+(myval1/8),40+(myval2/8)
+	positionsprite dragon2,168+(myval1/8),40+(myval2/8)
+	positionsprite dragon3,40-(myval1/8),88-(myval2/8)
+	positionsprite dragon4,168-(myval1/8),88-(myval2/8)
+end sub
+
+;Wave bootlegger logo
+;look up offset table, and posiiton sprite by offset, then increment and repeat for each letter
+sub iwram anim_bootlegger
+	local offset, i
+	restore offsets + anim_frame - 1
+
+	for i = 0 to 9
+		readb offset
+		positionsprite char[i], (i + 1) * 20, 72+offset
+	next
+	anim_frame=anim_frame+1
+	if anim_frame>=300
+		anim_frame=0
+	end if
+end sub
+
+sub init_dragons
+	loadpal16 SPRITE_PALETTE,4,dragonlogo_pal
+       	loadsprite dragon1_oam,dragonlogo_bmp,16
+	makesprite dragon1,dragon1_oam
+	sizesprite dragon1,SQUARE,SIZE_32
+	colorsprite dragon1,4
+       	loadsprite dragon2_oam,dragonlogo_bmp,16
+	makesprite dragon2,dragon2_oam
+	sizesprite dragon2,SQUARE,SIZE_32
+	colorsprite dragon2,4
+       	loadsprite dragon3_oam,dragonlogo_bmp,16
+	makesprite dragon3,dragon3_oam
+	sizesprite dragon3,SQUARE,SIZE_32
+	colorsprite dragon3,4
+       	loadsprite dragon4_oam,dragonlogo_bmp,16
+	makesprite dragon4,dragon4_oam
+	sizesprite dragon4,SQUARE,SIZE_32
+	colorsprite dragon4,4
+end sub
+
+; Code to simply initialise each letter of the bootlegger wavy log
+sub init_bootlegger
+	local i
+	loadpal16 SPRITE_PALETTE,3,letter_pal
+       	loadsprite letter_b,letter_b_bmp,8
+       	loadsprite letter_o,letter_o_bmp,8
+       	loadsprite letter_t,letter_t_bmp,8
+       	loadsprite letter_l,letter_l_bmp,8
+       	loadsprite letter_e,letter_e_bmp,8
+       	loadsprite letter_g,letter_g_bmp,8
+       	loadsprite letter_r,letter_r_bmp,8
+	makesprite char[0],letter_b
+	makesprite char[1],letter_o
+	makesprite char[2],letter_o
+	makesprite char[3],letter_t
+	makesprite char[4],letter_l
+	makesprite char[5],letter_e
+	makesprite char[6],letter_g
+	makesprite char[7],letter_g
+	makesprite char[8],letter_e
+	makesprite char[9],letter_r
+	for i = 0 to 9
+		sizesprite char[i],SQUARE,SIZE_16
+		colorsprite char[i],3
+		positionsprite char[i], (i + 1) * 20, 72
+	next
+end sub
+
+;Code to initialise red copper bar
+sub init_redbar
+	local i
+       	loadsprite red_oam,redbar_bmp,32
+	loadpal16 SPRITE_PALETTE,0,redbar_pal
+	for i = 0 to 3
+		makesprite redbar[i],red_oam
+		sizesprite redbar[i],WIDE,SIZE_64
+		colorsprite redbar[i],0
+		positionsprite redbar[i],i*64,0
+	next
+end sub
+
+;Code to initialise green copper bar
+sub init_greenbar
+	local i
+       	loadsprite green_oam,greenbar_bmp,32
+	loadpal16 SPRITE_PALETTE,1,greenbar_pal
+	for i = 0 to 3
+		makesprite greenbar[i],green_oam
+		sizesprite greenbar[i],WIDE,SIZE_64
+		colorsprite greenbar[i],1
+		positionsprite greenbar[i],i*64,0
+	next
+end sub
+
+;Code to initialise blue copper bar
+sub init_bluebar
+	local i
+       	loadsprite blue_oam,bluebar_bmp,32
+	loadpal16 SPRITE_PALETTE,2,bluebar_pal
+	for i = 0 to 3
+		makesprite bluebar[i],blue_oam
+		sizesprite bluebar[i],WIDE,SIZE_64
+		colorsprite bluebar[i],2
+		positionsprite bluebar[i],i*64,0
+	next
+	updatesprites
+end sub
+
+;Routine to bounce the copper bars
+sub iwram update_bars
+	local i
+	for i = 0 to 3
+		positionsprite redbar[i], i*64, r_ypos
+	next
+	if r_ydir=1 then r_ypos=r_ypos+1
+	if r_ydir=0 then r_ypos=r_ypos-1
+	if r_ypos=0 then r_ydir=1
+	if r_ypos=128 then r_ydir=0
+	for i = 0 to 3
+		positionsprite greenbar[i], i*64, g_ypos
+	next
+	if g_ydir=1 then g_ypos=g_ypos+1
+	if g_ydir=0 then g_ypos=g_ypos-1
+	if g_ypos=0 then g_ydir=1
+	if g_ypos=128 then g_ydir=0
+	for i = 0 to 3
+		positionsprite bluebar[i], i*64, b_ypos
+	next
+	if b_ydir=1 then b_ypos=b_ypos+1
+	if b_ydir=0 then b_ypos=b_ypos-1
+	if b_ypos=0 then b_ydir=1
+	if b_ypos=128 then b_ydir=0
+end sub
+
+;Generate 'Welcome To My' tiles
+sub display_tiles1
+	local i, j
+	restore tile_map
+       	for j=0 to 19
+                for i = 0 to 42
+       	            readb block
+		    if i >= 32
+			poke tile(9, i - 32, j), block
+		    else
+			poke tile(8,i,j),block
+		    end if
+      	     next
+        next
+        vblank
+end sub
+
+;Generate '32k Demo!' tiles
+sub display_tiles2
+	local i, j
+	restore tile_map2
+       	for j=0 to 19
+                for i = 0 to 29
+       	            readb block
+		    poke tile(16,i,j),block
+      	     next
+        next
+        vblank
+end sub
+
+;Generate background image
+sub display_tiles3
+	local i, j
+       	for j=0 to 31 step 2
+                for i = 0 to 31 step 2
+		    poke tile(24,i,j),1
+		    poke tile(24,i+1,j),2
+		    poke tile(24,i,j+1),3
+		    poke tile(24,i+1,j+1),4
+      	     next
+        next
+        vblank
+end sub
+
+start:
+	;Play the background music and initialise timer for 60 times a second
+	turnsoundon
+	playmusic wave
+	;maketimer 60
+	;starttimer
+
+	;Define sprite numbers
+	redbar[0]=40 : redbar[1]=41 : redbar[2]=42 : redbar[3]=43
+	greenbar[0]=44 : greenbar[1]=45 :greenbar[2]=46 :greenbar[3]=47
+	bluebar[0]=48 : bluebar[1]=49 : bluebar[2]=50 : bluebar[3]=51
+  	char[0]=12 : char[1]=13 : char[2]=14 : char[3]=15 : char[4]=16 : char[5]=17 : char[6]=18 : char[7]=19 : char[8]=20 : char[9]=21
+	dragon1=22 : dragon2=23 : dragon3=24 : dragon4=25
+
+	;Define OAM object locations
+	red_oam=8 : green_oam=40: blue_oam=72
+	letter_b=104 : letter_o=112 : letter_t=120 : letter_l=128 : letter_e=136 : letter_g=144 : letter_r=156
+	dragon1_oam=172 : dragon2_oam=188 : dragon3_oam=204 : dragon4_oam=220
+
+	;Set up graphics mode and background layers
+	Graphics 0,1
+	EnableTiles 0,8,0,TEXT_512x256 or BG_COLOR_16
+        EnableTiles 1,16,0,TEXT_256x512 or BG_COLOR_16
+        EnableTiles 2,24,0,TEXT_256x256 or BG_COLOR_16
+
+
+	;load tiles and palette for tiles
+	loadtiles charblock(0),0,piccy_bmp,tileends : loadpal16 BG_PALETTE,0,block_pal
+
+	; write tiles for game background
+	display_tiles1
+	display_tiles2
+	display_tiles3
+
+	; Initialise the copper bars
+	init_redbar
+	init_greenbar
+	init_bluebar
+	init_bootlegger
+	init_dragons
+
+	; Setup some default variables
+	anim_frame=0
+	r_ypos=32 : r_ydir=1
+	g_ypos=16 : g_ydir=1
+	b_ypos=0 : b_ydir=1
+	myoff=0
+
+	;Main loop to infinity
+	restore offsets
+	while
+		anim_bootlegger  ; Wave bootlegger logo
+		update_bars ; move copper bars
+		update_dragons ; move dragon logos
+
+		myval1=int(360.0*sin#(myoff)) ; Generate some sin/cos offsets
+		myval2=int(360.0*cos#(myoff))
+
+		;Poke hardware registers for scrolling the backgrounds
+		poke &4000010,(myval1/2)+50 ; move 'welcome to my' message
+
+		poke &4000016,((myval2/4)*2) ; move '32k demo' message
+
+		poke &4000018,myval1/4 ; move background
+		poke &400001a,myval2/4 ;
+
+		updatesprites
+		vblank  ; await vertical blank
+
+		myoff=myoff+1 :	if myoff=359 then myoff=0 ; calculate next sin/cos var
+
+		;This line is used purely to allow music loop to work succesfully on real hardware
+		;This line is not required if just using in VBA, however real hardware seems to lose
+		;the end marker and so continues to play after end of sample - this is a simple timer
+		;that can be used to check how long sample has played for and re-do sound if expired.
+		if clocktimer>100 : stopmusic : resettimer : playmusic wave : end if
+
+	loop
+	;loop to infinity
+
